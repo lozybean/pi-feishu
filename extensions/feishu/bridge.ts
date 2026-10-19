@@ -451,6 +451,7 @@ export class Bridge {
     if (session === undefined) return;
     // 查不到就保持 undefined，退回默认收件方 —— 没线索时不许猜
     this.#agentTarget = this.#agentOrigins.targetOf(session);
+    if (this.#agentTarget !== undefined) this.#turnSyncEnabled = true;
   }
 
   /** 登记会开新 run 的 prompt；并入当前 run 的 steer 没有 before_agent_start，不能留索引 */

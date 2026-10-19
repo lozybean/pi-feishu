@@ -1322,6 +1322,30 @@ test("watcher 推送触发的回合，发回当初派活的那个对话", async 
   assert.deepEqual(sink.streams, ["oc_group", "oc_group"], "结果必须回到派活的那个群");
 });
 
+test("关闭终端同步后，带飞书来源的 watcher 推送仍回原对话", async () => {
+  const sink = emptySink();
+  const bridge = new Bridge(
+    { ...MULTI, syncInteractiveTurns: false },
+    targetTrackingGateway(sink),
+    () => {},
+    () => 0,
+    1000,
+  );
+
+  claimFrom(bridge, "oc_group");
+  bridge.startTurn();
+  dispatch(bridge, "pi-ssh");
+  await bridge.endTurn();
+  bridge.settleAgent();
+
+  bridge.startTurn();
+  notice(bridge, "pi-ssh");
+  bridge.onTextDelta("后台结果");
+  await bridge.endTurn();
+
+  assert.deepEqual(sink.streams, ["oc_group", "oc_group"]);
+});
+
 test("推送并入正在跑的回合时，认领到的来源仍然优先", async () => {
   const sink = emptySink();
   const bridge = new Bridge(MULTI, targetTrackingGateway(sink), () => {}, () => 0, 1000);
