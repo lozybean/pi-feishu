@@ -270,6 +270,60 @@ test("gateToolCall：审批通道全挂时 fail-closed", async () => {
   assert.ok(blocked?.reason.includes("审批通道不可用"));
 });
 
+test("关闭终端同步后，无飞书来源的工具调用完全跳过扩展审批", async () => {
+  let feishuApprovals = 0;
+  let tuiApprovals = 0;
+  const bridge = new Bridge(
+    { ...CONFIG, syncInteractiveTurns: false },
+    fakeGateway({
+      askerFor: () => async () => {
+        feishuApprovals += 1;
+        return { allow: false, reason: "不该调用" };
+      },
+    }),
+    () => {},
+    () => 0,
+    1000,
+  );
+
+  bridge.startTurn();
+  const result = await bridge.gateToolCall(
+    "bash",
+    { command: "rm -rf /" },
+    async () => {
+      tuiApprovals += 1;
+      return { allow: false, reason: "不该调用" };
+    },
+  );
+
+  assert.equal(result, undefined, "应完全交给 Pi/Harness 原生审批策略");
+  assert.equal(feishuApprovals, 0);
+  assert.equal(tuiApprovals, 0);
+});
+
+test("关闭终端同步不放宽飞书来源回合的扩展审批", async () => {
+  let approvals = 0;
+  const bridge = new Bridge(
+    { ...MULTI, syncInteractiveTurns: false },
+    fakeGateway({
+      askerFor: () => async () => {
+        approvals += 1;
+        return { allow: false, reason: "飞书拒绝" };
+      },
+    }),
+    () => {},
+    () => 0,
+    1000,
+  );
+
+  claimFrom(bridge, "oc_group");
+  bridge.startTurn();
+  const result = await bridge.gateToolCall("bash", { command: "rm -rf /" }, undefined);
+
+  assert.deepEqual(result, { block: true, reason: "飞书拒绝" });
+  assert.equal(approvals, 1);
+});
+
 // ── 本回合全部允许 ──────────────────────────────────────────────────
 
 /** 卡片返回带 scope:"turn" 的批准 */

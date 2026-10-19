@@ -77,7 +77,7 @@ pi-asd 的推送在 `details.session` 里报出它说的是哪个 session，于�
 
 ## 终端回合同步开关只影响无飞书来源的交互回合
 
-`syncInteractiveTurns=false` 时，`startTurn` 仍维护完整的 pi 运行生命周期与延迟队列，但对没有 `originMessageId` 的终端交互回合关闭飞书流。正文、工具进度与普通审批卡片都不能触发 `streamTurn`；危险工具只保留 TUI 审批。飞书入站回合已有来源，仍正常回复原会话或话题。
+`syncInteractiveTurns=false` 时，`startTurn` 仍维护完整的 pi 运行生命周期与延迟队列，但对没有 `originMessageId` 的终端交互回合关闭飞书流。正文、工具进度与普通审批卡片都不能触发 `streamTurn`；`gateToolCall` 也必须直接返回 `undefined`，把安全决策完整交回 Pi/Harness 原生策略。飞书入站回合已有来源，仍正常回复原会话或话题并保留扩展审批。
 
 不要通过停止整个 gateway 实现这个开关：那会同时切断飞书入站。也不要只过滤 `input` 事件：assistant delta 与工具事件仍会建卡。最终闸门必须落在 Bridge 的回合同步状态和 `#startStreaming` 上。
 

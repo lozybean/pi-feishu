@@ -784,6 +784,10 @@ export class Bridge {
     toolCallId?: string,
     backgroundTarget?: SendTarget,
   ): Promise<{ block: true; reason: string } | undefined> {
+    // 关闭终端回合同步时，无飞书来源的普通回合完全交回 Pi/Harness 原生审批。
+    // 后台任务带显式飞书目标，飞书入站回合也有来源，仍由本扩展保护。
+    if (backgroundTarget === undefined && !this.#turnSyncEnabled) return undefined;
+
     // 判定本身抛错必须按危险处理。这是个 async 函数，未捕获的异常会变成
     // rejected promise 直接跳过 block 契约 —— 结果是危险工具被放行，
     // 在安全闸门上正好是最坏的方向。
