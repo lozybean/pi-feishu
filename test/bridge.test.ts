@@ -88,6 +88,7 @@ const CONFIG = {
   appId: "a",
   appSecret: "b",
   autoStart: false,
+  syncInteractiveTurns: true,
   dmMode: "allowlist" as const,
   dmAllowlist: ["ou_1"],
   groupAllowlist: [],
@@ -604,6 +605,44 @@ test("终端输入清掉来源 —— 不能沿用上一条飞书消息的对话
   await bridge.endTurn();
 
   assert.deepEqual(sink.streams, ["oc_group", undefined]);
+});
+
+test("关闭终端同步后，Pi 终端发起的回合不建飞书卡片", async () => {
+  const sink = { streams: [] as (string | undefined)[], texts: [], asks: [] };
+  const bridge = new Bridge(
+    { ...CONFIG, syncInteractiveTurns: false },
+    targetTrackingGateway(sink),
+    () => {},
+    () => 0,
+    1000,
+  );
+
+  bridge.startTurn();
+  bridge.onUserPrompt("终端问题", "interactive");
+  bridge.onTextDelta("终端回答");
+  bridge.onToolStart("call_1", "read", { path: "README.md" });
+  bridge.onToolEnd("call_1", false);
+  await bridge.endTurn();
+
+  assert.deepEqual(sink.streams, [], "终端发起回合的正文和工具进度都不该同步飞书");
+});
+
+test("关闭终端同步不影响飞书入站回合", async () => {
+  const sink = { streams: [] as (string | undefined)[], texts: [], asks: [] };
+  const bridge = new Bridge(
+    { ...MULTI, syncInteractiveTurns: false },
+    targetTrackingGateway(sink),
+    () => {},
+    () => 0,
+    1000,
+  );
+
+  claimFrom(bridge, "oc_group");
+  bridge.startTurn();
+  bridge.onTextDelta("飞书回答");
+  await bridge.endTurn();
+
+  assert.deepEqual(sink.streams, ["oc_group"]);
 });
 
 test("两条来自不同对话的消息，各自的回合回各自的对话", async () => {
